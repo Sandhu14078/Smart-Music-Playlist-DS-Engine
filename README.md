@@ -54,12 +54,12 @@ graph LR
     N1 ==>|next| N2
     N2 ==>|next| N3
     N3 ==>|next| N4
-    N4 ==>|next (Wrap-Around)| N1
+    N4 ==>|next - Wrap-Around| N1
 
     N2 -.->|prev| N1
     N3 -.->|prev| N2
     N4 -.->|prev| N3
-    N1 -.->|prev (Wrap-Around)| N4
+    N1 -.->|prev - Wrap-Around| N4
 ```
 
 ### 1. Node Memory Layout
