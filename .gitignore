@@ -1,0 +1,13 @@
+# Binaries
+*.exe
+*.o
+*.out
+playlist_engine
+
+# IDE
+.vscode/
+.vs/
+
+# OS
+.DS_Store
+Thumbs.db

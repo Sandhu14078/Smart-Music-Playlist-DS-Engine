@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Music Playlist — Circular & Doubly Linked List Visual Engine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #090d16;
+      --card: #0f172a;
+      --border: #1e293b;
+      --emerald: #10b981;
+      --emerald-glow: rgba(16, 185, 129, 0.4);
+      --cyan: #06b6d4;
+      --cyan-glow: rgba(6, 182, 212, 0.4);
+      --purple: #a855f7;
+      --rose: #f43f5e;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1.5rem 2rem;
+      overflow-x: hidden;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, var(--emerald), var(--cyan), var(--purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    p.subtitle {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin-top: 0.35rem;
+    }
+
+    /* Layout Grid */
+    .app-container {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 1.5rem;
+      max-width: 1200px;
+      width: 100%;
+    }
+
+    @media (max-width: 900px) {
+      .app-container { grid-template-columns: 1fr; }
+    }
+
+    /* Left: Music Player & Controls */
+    .player-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .album-art {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #064e3b, #0f766e, #1e3a8a);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(6, 182, 212, 0.25);
+    }
+
+    .vinyl-disc {
+      width: 160px;
+      height: 160px;
+      border-radius: 50%;
+      background: repeating-radial-gradient(circle, #0f172a, #0f172a 4px, #1e293b 5px, #1e293b 6px);
+      border: 3px solid #334155;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: spin 6s linear infinite;
+      animation-play-state: paused;
+    }
+
+    .vinyl-disc.playing {
+      animation-play-state: running;
+    }
+
+    @keyframes spin {
+      100% { transform: rotate(360deg); }
+    }
+
+    .vinyl-core {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 15px var(--cyan-glow);
+    }
+
+    .track-info {
+      text-align: center;
+    }
+
+    .track-title {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .track-artist {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 0.2rem;
+    }
+
+    .progress-bar-container {
+      width: 100%;
+      height: 6px;
+      background: #1e293b;
+      border-radius: 9999px;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 45%;
+      background: linear-gradient(90deg, var(--emerald), var(--cyan));
+      border-radius: 9999px;
+      transition: width 0.1s linear;
+    }
+
+    /* Playback Buttons */
+    .player-buttons {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 1.25rem;
+    }
+
+    .ctrl-btn {
+      background: #1e293b;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      color: var(--text);
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .ctrl-btn:hover {
+      background: #334155;
+      transform: scale(1.1);
+    }
+
+    .ctrl-btn.play {
+      width: 56px;
+      height: 56px;
+      background: linear-gradient(135deg, var(--emerald), var(--cyan));
+      font-size: 1.4rem;
+      box-shadow: 0 0 16px var(--emerald-glow);
+    }
+
+    /* Linked List Operations */
+    .ops-section {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      background: #090d16;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.55rem 0.85rem;
+      border-radius: 8px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.85rem;
+      outline: none;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--cyan);
+    }
+
+    .btn-action {
+      background: #1e293b;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.55rem 0.95rem;
+      border-radius: 8px;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 600;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn-action:hover {
+      border-color: var(--cyan);
+      background: #243247;
+    }
+
+    /* Right: Visual Linked List Canvas */
+    .visualizer-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      position: relative;
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.85rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .canvas-container {
+      flex: 1;
+      min-height: 420px;
+      position: relative;
+      background: radial-gradient(circle at 50% 50%, #111a2e 0%, #090d16 100%);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    svg#listSvg {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Console Terminal at Bottom of Visualizer */
+    .console-box {
+      margin-top: 1.25rem;
+      background: #05080f;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.85rem 1.25rem;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.8rem;
+      color: var(--cyan);
+      height: 120px;
+      overflow-y: auto;
+    }
+
+    .console-line { margin-bottom: 0.25rem; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>SMART MUSIC PLAYLIST</h1>
+    <p class="subtitle">Circular & Doubly Linked List Architecture • $O(1)$ Pointer Navigation • Live Memory Canvas</p>
+  </header>
+
+  <div class="app-container">
+
+    <!-- Player Controls Card -->
+    <div class="player-card">
+      <div class="album-art">
+        <div class="vinyl-disc" id="vinyl">
+          <div class="vinyl-core"></div>
+        </div>
+      </div>
+
+      <div class="track-info">
+        <div class="track-title" id="trackTitle">National Treasure</div>
+        <div class="track-artist" id="trackMeta">Track #1 of 3 • Circular Head Node</div>
+      </div>
+
+      <div class="progress-bar-container" id="progressBar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+
+      <!-- Playback Navigation Controls -->
+      <div class="player-buttons">
+        <button class="ctrl-btn" id="btnPrev" title="Play Previous (Doubly Linked Backward)">⏮️</button>
+        <button class="ctrl-btn play" id="btnPlay" title="Toggle Play / Pause">▶️</button>
+        <button class="ctrl-btn" id="btnNext" title="Play Next (Circular Pointer Forward)">⏭️</button>
+      </div>
+
+      <!-- Data Structure Operations Deck -->
+      <div class="ops-section">
+        <div class="input-row">
+          <input type="text" id="songInput" placeholder="Enter song title..." value="Peaky Blinders Theme" />
+          <button class="btn-action" id="btnInsertAfter">➕ Insert After Current</button>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.25rem;">
+          <button class="btn-action" id="btnDeleteCurrent" style="color: var(--rose);">🗑️ Delete Current</button>
+          <button class="btn-action" id="btnPlayRound">🔁 1 Full Round</button>
+        </div>
+
+        <div class="input-row" style="margin-top: 0.25rem;">
+          <input type="text" id="searchInput" placeholder="Search track title..." />
+          <button class="btn-action" id="btnSearch">🔍 Search</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Visualizer Canvas Card -->
+    <div class="visualizer-card">
+      <div class="card-title">
+        <span>🧬 Live Dynamic Linked List Topology</span>
+        <span style="font-size: 0.8rem; font-family: 'Fira Code', monospace; color: var(--emerald);">
+          Head: <span id="headLabel">Track 1</span>
+        </span>
+      </div>
+
+      <div class="canvas-container">
+        <svg id="listSvg" viewBox="0 0 720 380">
+          <defs>
+            <!-- Marker Arrowhead -->
+            <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#06b6d4" />
+            </marker>
+            <marker id="arrow-circ" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#10b981" />
+            </marker>
+          </defs>
+          <g id="linksLayer"></g>
+          <g id="nodesLayer"></g>
+        </svg>
+      </div>
+
+      <div class="console-box" id="consoleBox">
+        <div class="console-line">[INIT] Circular Singly & Doubly Linked List initialized.</div>
+        <div class="console-line">[HEAP] 3 dynamic nodes allocated. Tail node links back to Head.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // Web Audio Synthesizer (Chilled Synthwave Background Tone)
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    let isPlaying = false;
+    let osc = null;
+    let gainNode = null;
+
+    function startMusic() {
+      if (isPlaying) return;
+      try {
+        osc = audioCtx.createOscillator();
+        gainNode = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(220, audioCtx.currentTime); // A3 Note
+        gainNode.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        osc.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        osc.start();
+        isPlaying = true;
+        document.getElementById('vinyl').classList.add('playing');
+        document.getElementById('btnPlay').textContent = '⏸️';
+      } catch(e) {}
+    }
+
+    function stopMusic() {
+      if (!isPlaying) return;
+      try {
+        osc.stop();
+        osc.disconnect();
+        isPlaying = false;
+        document.getElementById('vinyl').classList.remove('playing');
+        document.getElementById('btnPlay').textContent = '▶️';
+      } catch(e) {}
+    }
+
+    function togglePlay() {
+      if (isPlaying) stopMusic();
+      else startMusic();
+    }
+
+    // Circular Linked List Model
+    class SongNode {
+      constructor(title) {
+        this.title = title;
+        this.next = null;
+        this.prev = null;
+      }
+    }
+
+    class CircularPlaylist {
+      constructor() {
+        this.head = null;
+        this.current = null;
+        this.size = 0;
+      }
+
+      addSong(title) {
+        const node = new SongNode(title);
+        if (!this.head) {
+          this.head = node;
+          this.current = node;
+          node.next = this.head;
+          node.prev = this.head;
+        } else {
+          let tail = this.head.prev;
+          tail.next = node;
+          node.prev = tail;
+          node.next = this.head;
+          this.head.prev = node;
+        }
+        this.size++;
+      }
+
+      insertAfterCurrent(title) {
+        if (!this.head) {
+          this.addSong(title);
+          return;
+        }
+        const node = new SongNode(title);
+        node.next = this.current.next;
+        node.prev = this.current;
+        this.current.next.prev = node;
+        this.current.next = node;
+        this.size++;
+      }
+
+      deleteCurrent() {
+        if (!this.head) return null;
+        const deletedTitle = this.current.title;
+        if (this.size === 1) {
+          this.head = null;
+          this.current = null;
+          this.size = 0;
+          return deletedTitle;
+        }
+        this.current.prev.next = this.current.next;
+        this.current.next.prev = this.current.prev;
+        if (this.current === this.head) {
+          this.head = this.current.next;
+        }
+        this.current = this.current.next;
+        this.size--;
+        return deletedTitle;
+      }
+
+      playNext() {
+        if (this.current) this.current = this.current.next;
+      }
+
+      playPrev() {
+        if (this.current) this.current = this.current.prev;
+      }
+
+      search(title) {
+        if (!this.head) return false;
+        let temp = this.head;
+        do {
+          if (temp.title.toLowerCase() === title.toLowerCase()) return true;
+          temp = temp.next;
+        } while (temp !== this.head);
+        return false;
+      }
+    }
+
+    // Initialize Playlist with Assignment Test Run Data
+    const playlist = new CircularPlaylist();
+    playlist.addSong("National Treasure");
+    playlist.addSong("Loosing Myself");
+    playlist.addSong("Dark Knight");
+
+    const linksLayer = document.getElementById('linksLayer');
+    const nodesLayer = document.getElementById('nodesLayer');
+    const consoleBox = document.getElementById('consoleBox');
+
+    function logConsole(msg) {
+      consoleBox.innerHTML += `<div class="console-line">${msg}</div>`;
+      consoleBox.scrollTop = consoleBox.scrollHeight;
+    }
+
+    // Render Nodes in Circular / Elliptical Ring Layout
+    function renderVisualList() {
+      linksLayer.innerHTML = '';
+      nodesLayer.innerHTML = '';
+
+      if (playlist.size === 0) {
+        document.getElementById('trackTitle').textContent = "Playlist is Empty";
+        document.getElementById('trackMeta').textContent = "0 tracks available";
+        document.getElementById('headLabel').textContent = "None";
+        return;
+      }
+
+      document.getElementById('trackTitle').textContent = playlist.current.title;
+      document.getElementById('headLabel').textContent = playlist.head.title;
+
+      const cx = 360, cy = 190;
+      const rx = 240, ry = 110;
+      const nodesData = [];
+
+      let temp = playlist.head;
+      let idx = 0;
+      do {
+        const angle = (idx / playlist.size) * (2 * Math.PI) - (Math.PI / 2);
+        const x = cx + rx * Math.cos(angle);
+        const y = cy + ry * Math.sin(angle);
+        nodesData.push({ node: temp, x, y, idx });
+        temp = temp.next;
+        idx++;
+      } while (temp !== playlist.head);
+
+      // Render Pointer Links (Curved Arrows)
+      for (let i = 0; i < nodesData.length; i++) {
+        const from = nodesData[i];
+        const to = nodesData[(i + 1) % nodesData.length];
+
+        const isWrapAround = (i === nodesData.length - 1);
+        const link = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+
+        // Bezier curve connecting nodes
+        const d = `M ${from.x} ${from.y} Q ${(from.x + to.x) / 2} ${(from.y + to.y) / 2 - (isWrapAround ? 35 : 0)} ${to.x} ${to.y}`;
+        link.setAttribute('d', d);
+        link.setAttribute('fill', 'none');
+        link.setAttribute('stroke', isWrapAround ? '#10b981' : '#06b6d4');
+        link.setAttribute('stroke-width', '2.5');
+        link.setAttribute('marker-end', isWrapAround ? 'url(#arrow-circ)' : 'url(#arrow)');
+        linksLayer.appendChild(link);
+      }
+
+      // Render Node Bodies
+      nodesData.forEach(d => {
+        const isCurrent = (d.node === playlist.current);
+        const isHead = (d.node === playlist.head);
+
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.style.cursor = 'pointer';
+        g.onclick = () => {
+          playlist.current = d.node;
+          logConsole(`[POINTER NAV] Current pointer directed to: '${d.node.title}'`);
+          renderVisualList();
+        };
+
+        // Node Box
+        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        rect.setAttribute('x', d.x - 70);
+        rect.setAttribute('y', d.y - 24);
+        rect.setAttribute('width', 140);
+        rect.setAttribute('height', 48);
+        rect.setAttribute('rx', 10);
+        rect.setAttribute('fill', isCurrent ? '#064e3b' : '#0f172a');
+        rect.setAttribute('stroke', isCurrent ? '#10b981' : (isHead ? '#38bdf8' : '#334155'));
+        rect.setAttribute('stroke-width', isCurrent ? '3' : '1.5');
+        if (isCurrent) rect.style.filter = 'drop-shadow(0 0 10px rgba(16, 185, 129, 0.6))';
+        g.appendChild(rect);
+
+        // Song Title Text
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', d.x);
+        text.setAttribute('y', d.y + 4);
+        text.setAttribute('text-anchor', 'middle');
+        text.setAttribute('fill', '#ffffff');
+        text.setAttribute('font-family', 'Outfit');
+        text.setAttribute('font-weight', '700');
+        text.setAttribute('font-size', '12px');
+        text.textContent = d.node.title.length > 15 ? d.node.title.slice(0, 13) + '..' : d.node.title;
+        g.appendChild(text);
+
+        // Role Badge (HEAD / CURRENT)
+        if (isCurrent || isHead) {
+          const badge = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          badge.setAttribute('x', d.x);
+          badge.setAttribute('y', d.y - 30);
+          badge.setAttribute('text-anchor', 'middle');
+          badge.setAttribute('fill', isCurrent ? '#10b981' : '#38bdf8');
+          badge.setAttribute('font-family', 'Fira Code');
+          badge.setAttribute('font-weight', '600');
+          badge.setAttribute('font-size', '10px');
+          badge.textContent = isCurrent && isHead ? '★ HEAD & CURRENT' : (isCurrent ? '▶ CURRENT' : 'HEAD');
+          g.appendChild(badge);
+        }
+
+        nodesLayer.appendChild(g);
+      });
+    }
+
+    // Event Bindings
+    document.getElementById('btnPlay').addEventListener('click', togglePlay);
+
+    document.getElementById('btnNext').addEventListener('click', () => {
+      playlist.playNext();
+      logConsole(`[POINTER ADVANCE] current = current->next. Now playing: '${playlist.current.title}' (Circular Wrap-around active)`);
+      renderVisualList();
+    });
+
+    document.getElementById('btnPrev').addEventListener('click', () => {
+      playlist.playPrev();
+      logConsole(`[POINTER REVERSE] current = current->prev. Now playing: '${playlist.current.title}'`);
+      renderVisualList();
+    });
+
+    document.getElementById('btnInsertAfter').addEventListener('click', () => {
+      const input = document.getElementById('songInput');
+      const title = input.value.trim();
+      if (!title) return;
+      playlist.insertAfterCurrent(title);
+      logConsole(`[INSERTION] Created new dynamic node '${title}' after '${playlist.current.title}'. Pointers re-wired.`);
+      input.value = '';
+      renderVisualList();
+    });
+
+    document.getElementById('btnDeleteCurrent').addEventListener('click', () => {
+      if (playlist.size === 0) return;
+      const title = playlist.deleteCurrent();
+      logConsole(`[DELETION] Node '${title}' unlinked from heap. Neighbor pointers stitched.`);
+      renderVisualList();
+    });
+
+    document.getElementById('btnSearch').addEventListener('click', () => {
+      const q = document.getElementById('searchInput').value.trim();
+      if (!q) return;
+      const found = playlist.search(q);
+      if (found) {
+        logConsole(`[SEARCH RESULT] ✅ Query '${q}' FOUND in circular playlist!`);
+        alert(`Song '${q}' was found in the playlist!`);
+      } else {
+        logConsole(`[SEARCH RESULT] ❌ Query '${q}' NOT FOUND in playlist.`);
+        alert(`Song '${q}' is NOT in the playlist.`);
+      }
+    });
+
+    document.getElementById('btnPlayRound').addEventListener('click', () => {
+      if (!playlist.head) return;
+      logConsole(`\n[TRAVERSAL ROUND START] Playing 1 complete circular cycle from current:`);
+      let temp = playlist.current;
+      let count = 1;
+      do {
+        logConsole(`  (${count}) ▶ ${temp.title}`);
+        temp = temp.next;
+        count++;
+      } while (temp !== playlist.current);
+      logConsole(`[TRAVERSAL COMPLETE] Returned safely to start node without infinite loop.\n`);
+    });
+
+    // Initial Render
+    renderVisualList();
+  </script>
+</body>
+</html>
